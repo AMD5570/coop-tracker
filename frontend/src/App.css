@@ -1,0 +1,9 @@
+.appHeader {
+  text-align: center;
+  background-color: #F76902;
+  padding: 10px;
+  color: white;
+  border-bottom-left-radius: 30px;
+  border-bottom-right-radius: 30px;
+  margin-bottom: 2em;
+}
