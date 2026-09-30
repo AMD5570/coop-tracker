@@ -7,3 +7,7 @@
   border-bottom-right-radius: 30px;
   margin-bottom: 2em;
 }
+
+main {
+  padding: 0 5em 0 5em;
+}

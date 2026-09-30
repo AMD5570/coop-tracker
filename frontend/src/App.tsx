@@ -29,6 +29,10 @@ export default function App() {
     fetchData();
   }, []);
 
+  const handleDeleteSuccess = (applicationId: number) => {
+    setData((prev) => prev.filter((data) => data.application_id != applicationId));
+  }
+
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;
 
@@ -39,7 +43,7 @@ export default function App() {
       </header>
 
       <main>
-        <ApplicationsTable rows={data} />
+        <ApplicationsTable rows={data} onDeleteSuccess={handleDeleteSuccess} />
       </main>
     </>
   );

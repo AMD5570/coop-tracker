@@ -8,6 +8,7 @@ import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import RowButtons from './RowButtons/RowButtons';
 
 export interface Application {
   application_id: number;
@@ -24,6 +25,7 @@ export interface Application {
 
 interface ApplicationsTableProps {
   rows: Application[];
+  onDeleteSuccess: (application_id: number) => void;
 }
 
 const theme = createTheme({
@@ -33,14 +35,13 @@ const theme = createTheme({
           head: {
             fontWeight: 700,
             fontSize: '1.1em',
-            // textAlign: 'center',
           },
         },
       },
     },
   });
 
-export default function ApplicationsTable({ rows }: ApplicationsTableProps) {
+export default function ApplicationsTable({ rows, onDeleteSuccess }: ApplicationsTableProps) {
 
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
@@ -70,6 +71,8 @@ export default function ApplicationsTable({ rows }: ApplicationsTableProps) {
                     <TableCell>Interest</TableCell>
                     <TableCell>Resume</TableCell>
                     <TableCell>Cover letter</TableCell>
+                    <TableCell>Notes</TableCell>
+                    <TableCell></TableCell>
                 </TableRow>
             </TableHead>
             <TableBody>
@@ -91,6 +94,10 @@ export default function ApplicationsTable({ rows }: ApplicationsTableProps) {
                     <TableCell>{application.interest_rating}/5</TableCell>
                     <TableCell>{application.used_resume ? 'Yes' : 'No'}</TableCell>
                     <TableCell>{application.used_cover_letter ? 'Yes' : 'No'}</TableCell>
+                    <TableCell>{application.notes}</TableCell>
+                    <TableCell width="30px">
+                      <RowButtons applicationId={application.application_id} onDeleteSuccess={onDeleteSuccess} />
+                    </TableCell>
                     </TableRow>
                 ))
                 )}

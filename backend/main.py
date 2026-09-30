@@ -152,6 +152,28 @@ def create_new_application(payload: ApplicationCreate):
         }
 
 
+
+@app.delete("/api/applications/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_application(application_id: int):
+    """
+    Removes an application from the database.
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM applications WHERE application_id = ?", (application_id,))
+
+        if cursor.rowcount == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Application with ID {application_id} not found."
+            )
+
+        conn.commit()
+
+    return None
+
+
 @app.get("/api/health")
 def server_health_check():
     """
