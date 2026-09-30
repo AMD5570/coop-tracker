@@ -11,7 +11,7 @@ export default function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/applications');
+        const response = await fetch('/coop-tracker/api/applications');
 
         if (!response.ok) {
           throw new Error(`HTTP Error! Status: ${response.status}`);

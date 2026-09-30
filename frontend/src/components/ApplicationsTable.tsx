@@ -114,7 +114,7 @@ export default function ApplicationsTable({
     setStatusError(null);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/applications', {
+      const response = await fetch('/coop-tracker/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -195,7 +195,7 @@ export default function ApplicationsTable({
     setIsSavingEdit(true);
     setStatusError(null);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/applications/${applicationId}`, {
+      const response = await fetch(`/coop-tracker/api/applications/${applicationId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -230,7 +230,7 @@ export default function ApplicationsTable({
     setUpdatingApplicationIds((current) => new Set(current).add(applicationId));
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/applications/${applicationId}`, {
+      const response = await fetch(`/coop-tracker/api/applications/${applicationId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus }),

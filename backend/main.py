@@ -66,6 +66,7 @@ api_router = APIRouter(prefix="/coop-tracker/api")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://coop-tracker.austindehaan.com",
         "https://austindehaan.com",
         "https://www.austindehaan.com",
         "http://ff4:8001",

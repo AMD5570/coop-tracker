@@ -28,7 +28,7 @@ export default function RowButtons({
 
     const handleDelete = async () => {
         try {
-            const response = await fetch (`http://127.0.0.1:8000/api/applications/${applicationId}`, {
+            const response = await fetch (`/coop-tracker/api/applications/${applicationId}`, {
                 method: "DELETE",
             });
 
