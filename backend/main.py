@@ -311,10 +311,12 @@ if FRONTEND_DIST.exists():
         app.mount("/coop-tracker/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
     @app.get("/coop-tracker/{path:path}")
-    async def serve_frontend(path: str):
+    async def serve_frontend(path: str = ""):
+
         file_path = FRONTEND_DIST / path
-        if file_path.is_file():
+        if path and file_path.is_file():
             return FileResponse(file_path)
+        
         return FileResponse(FRONTEND_DIST / "index.html")
 
     @app.get("/coop-tracker")
