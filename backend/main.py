@@ -3,6 +3,7 @@ from pathlib import Path
 import sqlite3
 from fastapi import FastAPI, HTTPException, status, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
@@ -60,7 +61,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Define API router
 api_router = APIRouter(prefix="/coop-tracker/api")
 
 app.add_middleware(
@@ -79,8 +79,12 @@ app.add_middleware(
 
 @api_router.get("/applications")
 def get_applications():
+    """
+    Fetches all internship applications with their company details.
+    """
     with get_db() as conn:
         cursor = conn.cursor()
+
         query = """
             SELECT
                 a.application_id,
@@ -98,12 +102,17 @@ def get_applications():
             JOIN company c USING (company_id)
             ORDER BY a.application_id ASC;
         """
+
         rows = cursor.execute(query).fetchall()
+
         return [dict(row) for row in rows]
 
 
 @api_router.post("/applications", status_code=status.HTTP_201_CREATED)
 def create_new_application(payload: ApplicationCreate):
+    """
+    Creates a new application.
+    """
     with get_db() as conn:
         cursor = conn.cursor()
 
@@ -156,6 +165,8 @@ def create_new_application(payload: ApplicationCreate):
         )
         applied_date = cursor.fetchone()["applied_date"]
 
+        conn.commit()
+
         return {
             "application_id": application_id,
             "company_id": company_id,
@@ -174,8 +185,12 @@ def create_new_application(payload: ApplicationCreate):
 
 @api_router.delete("/applications/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_application(application_id: int):
+    """
+    Removes an application from the database.
+    """
     with get_db() as conn:
         cursor = conn.cursor()
+
         cursor.execute("DELETE FROM applications WHERE application_id = ?", (application_id,))
 
         if cursor.rowcount == 0:
@@ -183,6 +198,7 @@ def remove_application(application_id: int):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Application with ID {application_id} not found."
             )
+
         conn.commit()
 
     return None
@@ -190,6 +206,9 @@ def remove_application(application_id: int):
 
 @api_router.patch("/applications/{application_id}")
 def update_application(application_id: int, payload: ApplicationUpdate):
+    """
+    Updates the changed fields of an application.
+    """
     updates = payload.model_dump(exclude_unset=True)
 
     if not updates:
@@ -230,6 +249,7 @@ def update_application(application_id: int, payload: ApplicationUpdate):
                     "INSERT INTO company (company_name, contact_info) VALUES (?, NULL)",
                     (company_name,),
                 )
+
                 company_id = cursor.lastrowid
             else:
                 company_id = company["company_id"]
@@ -271,6 +291,9 @@ def update_application(application_id: int, payload: ApplicationUpdate):
 
 @api_router.get("/health")
 def server_health_check():
+    """
+    Checks to see if the table(s) were successfully created.
+    """
     with get_db() as conn:
         cursor = conn.cursor()
         tables = cursor.execute(
@@ -283,4 +306,17 @@ def server_health_check():
 app.include_router(api_router)
 
 if FRONTEND_DIST.exists():
-    app.mount("/coop-tracker/static", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="frontend")
+    assets_dir = FRONTEND_DIST / "assets"
+    if assets_dir.exists():
+        app.mount("/coop-tracker/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    @app.get("/coop-tracker/{path:path}")
+    async def serve_frontend(path: str):
+        file_path = FRONTEND_DIST / path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(FRONTEND_DIST / "index.html")
+
+    @app.get("/coop-tracker")
+    async def serve_frontend_root():
+        return FileResponse(FRONTEND_DIST / "index.html")
