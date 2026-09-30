@@ -45,10 +45,11 @@ def init_db():
     if not SCHEMA_PATH.exists():
         raise FileNotFoundError(f"Could not find schema file at: {SCHEMA_PATH.resolve()}")
 
-    with get_db() as conn:
-        with open(SCHEMA_PATH, "r") as f:
-            schema_script = f.read()
-        conn.executescript(schema_script)
+    if not DB_PATH.exists():
+        with get_db() as conn:
+            with open(SCHEMA_PATH, "r") as f:
+                schema_script = f.read()
+            conn.executescript(schema_script)
 
 
 @asynccontextmanager
@@ -64,6 +65,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/api/applications")
 def get_applications():
@@ -167,7 +169,6 @@ def create_new_application(payload: ApplicationCreate):
             "status": payload.status,
             "applied_date": applied_date
         }
-
 
 
 @app.delete("/api/applications/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
