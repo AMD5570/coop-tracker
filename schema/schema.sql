@@ -18,6 +18,7 @@ CREATE TABLE applications (
     used_cover_letter BOOLEAN NOT NULL DEFAULT 0,
     interest_rating INTEGER CHECK (interest_rating BETWEEN 1 AND 5),
     notes TEXT DEFAULT '',
+    status TEXT NOT NULL CHECK (status IN ('Pending', 'Declined', 'Interview', 'Offered', 'Accepted')),
     applied_date TEXT DEFAULT (date('now')),
     FOREIGN KEY (company_id) REFERENCES company(company_id)
         ON DELETE CASCADE

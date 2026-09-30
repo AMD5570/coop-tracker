@@ -3,7 +3,7 @@ from pathlib import Path
 import sqlite3
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -19,7 +19,19 @@ class ApplicationCreate(BaseModel):
     used_cover_letter: bool = False
     interest_rating: int = Field(default=3, ge=1, le=5)
     notes: Optional[str] = ""
+    status: Literal['Pending', 'Declined', 'Interview', 'Offered', 'Accepted'] = 'Pending'
     contact_info: Optional[str] = None
+
+
+class ApplicationUpdate(BaseModel):
+    position_title: Optional[str] = Field(default=None, min_length=1)
+    company_name: Optional[str] = Field(default=None, min_length=1)
+    location: Optional[str] = None
+    used_resume: Optional[bool] = None
+    used_cover_letter: Optional[bool] = None
+    interest_rating: Optional[int] = Field(default=None, ge=1, le=5)
+    notes: Optional[str] = None
+    status: Optional[Literal["Pending", "Declined", "Interview", "Offered", "Accepted"]] = None
 
 
 def get_db():
@@ -70,12 +82,13 @@ def get_applications():
                 a.used_cover_letter,
                 a.interest_rating,
                 a.notes,
+                a.status,
                 a.applied_date,
                 c.company_name,
                 c.contact_info
             FROM applications a
             JOIN company c USING (company_id)
-            ORDER BY a.application_id DESC;
+            ORDER BY a.application_id ASC;
         """
 
         rows = cursor.execute(query).fetchall()
@@ -116,8 +129,9 @@ def create_new_application(payload: ApplicationCreate):
                 used_resume,
                 used_cover_letter,
                 interest_rating,
-                notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                notes,
+                status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 company_id,
@@ -127,6 +141,7 @@ def create_new_application(payload: ApplicationCreate):
                 payload.used_cover_letter,
                 payload.interest_rating,
                 payload.notes,
+                payload.status,
             )
         )
 
@@ -142,12 +157,14 @@ def create_new_application(payload: ApplicationCreate):
             "application_id": application_id,
             "company_id": company_id,
             "company_name": stripped_company_name,
+            "contact_info": payload.contact_info,
             "position_title": payload.position_title,
             "location": payload.location,
             "used_resume": payload.used_resume,
             "used_cover_letter": payload.used_cover_letter,
             "interest_rating": payload.interest_rating,
             "notes": payload.notes,
+            "status": payload.status,
             "applied_date": applied_date
         }
 
@@ -172,6 +189,91 @@ def remove_application(application_id: int):
         conn.commit()
 
     return None
+
+
+@app.patch("/api/applications/{application_id}")
+def update_application(application_id: int, payload: ApplicationUpdate):
+    """
+    Updates the changed fields of an application.
+    """
+    updates = payload.model_dump(exclude_unset=True)
+
+    if not updates:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="No fields to update.")
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        existing = cursor.execute(
+            "SELECT application_id FROM applications WHERE application_id = ?",
+            (application_id,),
+        ).fetchone()
+
+        if existing is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Application with ID {application_id} not found.",
+            )
+
+        if "position_title" in updates:
+            updates["position_title"] = updates["position_title"].strip()
+            if not updates["position_title"]:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Position is required.")
+
+        if "company_name" in updates:
+            company_name = updates.pop("company_name").strip()
+
+            if not company_name:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Company is required.")
+            
+            company = cursor.execute(
+                "SELECT company_id FROM company WHERE LOWER(company_name) = LOWER(?)",
+                (company_name,),
+            ).fetchone()
+
+            if company is None:
+                cursor.execute(
+                    "INSERT INTO company (company_name, contact_info) VALUES (?, NULL)",
+                    (company_name,),
+                )
+
+                company_id = cursor.lastrowid
+            else:
+                company_id = company["company_id"]
+            updates["company_id"] = company_id
+
+        allowed_fields = {
+            "position_title",
+            "location",
+            "used_resume",
+            "used_cover_letter",
+            "interest_rating",
+            "notes",
+            "status",
+            "company_id",
+        }
+        assignments = ", ".join(f"{field} = ?" for field in updates if field in allowed_fields)
+        values = [value for field, value in updates.items() if field in allowed_fields]
+
+        cursor.execute(
+            f"UPDATE applications SET {assignments} WHERE application_id = ?",
+            (*values, application_id),
+        )
+        conn.commit()
+
+        updated = cursor.execute(
+            """
+            SELECT a.application_id, a.position_title, a.location, a.used_resume,
+                   a.used_cover_letter, a.interest_rating, a.notes, a.status,
+                   a.applied_date, c.company_name, c.contact_info
+            FROM applications a
+            JOIN company c USING (company_id)
+            WHERE a.application_id = ?
+            """,
+            (application_id,),
+        ).fetchone()
+
+    return dict(updated)
 
 
 @app.get("/api/health")

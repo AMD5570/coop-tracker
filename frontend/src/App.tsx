@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import './App.css';
-import ApplicationsTable, { type Application } from './components/ApplicationsTable';
+import ApplicationsTable, { type Application, type ApplicationStatus } from './components/ApplicationsTable';
 
 export default function App() {
 
@@ -33,6 +33,22 @@ export default function App() {
     setData((prev) => prev.filter((data) => data.application_id != applicationId));
   }
 
+  const handleStatusChange = (applicationId: number, status: ApplicationStatus) => {
+    setData((prev) => prev.map((application) =>
+      application.application_id === applicationId ? { ...application, status } : application,
+    ));
+  };
+
+  const handleCreateSuccess = (application: Application) => {
+    setData((prev) => [...prev, application]);
+  };
+
+  const handleUpdateSuccess = (updatedApplication: Application) => {
+    setData((prev) => prev.map((application) =>
+      application.application_id === updatedApplication.application_id ? updatedApplication : application,
+    ));
+  };
+
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;
 
@@ -43,8 +59,18 @@ export default function App() {
       </header>
 
       <main>
-        <ApplicationsTable rows={data} onDeleteSuccess={handleDeleteSuccess} />
+        <ApplicationsTable
+          rows={data}
+          onDeleteSuccess={handleDeleteSuccess}
+          onStatusChange={handleStatusChange}
+          onCreateSuccess={handleCreateSuccess}
+          onUpdateSuccess={handleUpdateSuccess}
+        />
       </main>
+
+      <footer>
+        <p>Austin deHaan - {new Date().getFullYear()}</p>
+      </footer>
     </>
   );
 }
