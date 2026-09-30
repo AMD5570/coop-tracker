@@ -1,10 +1,11 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 import sqlite3
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
+from fastapi.staticfiles import StaticFiles
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "schema.db"
@@ -59,6 +60,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+api_router = APIRouter(prefix="/coop-tracker/api")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -73,7 +76,7 @@ app.add_middleware(
 )
 
 
-@app.get("/api/applications")
+@api_router.get("/applications")
 def get_applications():
     """
     Fetches all internship applications with their company details.
@@ -104,7 +107,7 @@ def get_applications():
         return [dict(row) for row in rows]
 
 
-@app.post("/api/applications", status_code=status.HTTP_201_CREATED)
+@api_router.post("/applications", status_code=status.HTTP_201_CREATED)
 def create_new_application(payload: ApplicationCreate):
     """
     Creates a new application.
@@ -177,7 +180,7 @@ def create_new_application(payload: ApplicationCreate):
         }
 
 
-@app.delete("/api/applications/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
+@api_router.delete("/applications/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_application(application_id: int):
     """
     Removes an application from the database.
@@ -198,7 +201,7 @@ def remove_application(application_id: int):
     return None
 
 
-@app.patch("/api/applications/{application_id}")
+@api_router.patch("/applications/{application_id}")
 def update_application(application_id: int, payload: ApplicationUpdate):
     """
     Updates the changed fields of an application.
@@ -283,7 +286,7 @@ def update_application(application_id: int, payload: ApplicationUpdate):
     return dict(updated)
 
 
-@app.get("/api/health")
+@api_router.get("/health")
 def server_health_check():
     """
     Checks to see if the table(s) were successfully created.
@@ -295,3 +298,9 @@ def server_health_check():
         ).fetchall()
         table_names = [row["name"] for row in tables if not row["name"].startswith("sqlite_")]
         return {"status": "ok", "tables": table_names}
+
+
+app.include_router(api_router)
+
+if FRONTEND_DIST.exists():
+    app.mount("/coop-tracker", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="frontend")
